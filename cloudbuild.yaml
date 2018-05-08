@@ -1,0 +1,14 @@
+# TODO(bgb): $REPO_NAME only available on triggered builds. What to do for manual builds?
+steps:
+
+  # Building
+  - id: build-builder
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '--rm=false', '-t', 'gcr.io/$PROJECT_ID/$REPO_NAME', '-f', 'Dockerfile.builder', '.']
+
+  # Linting
+  - id: lint
+    name: gcr.io/$PROJECT_ID/$REPO_NAME
+    args: ['./lint.sh']
+    waitFor:
+      - build-builder
