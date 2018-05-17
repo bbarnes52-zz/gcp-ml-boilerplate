@@ -77,7 +77,7 @@ def _get_query(project, dataset, table):
     FROM
         `{project}.{dataset}.{table}`
     LIMIT
-        100
+        1000
     """.format(
         project=project, dataset=dataset, table=table)
 
@@ -95,10 +95,12 @@ class DataValidator(beam.DoFn):
 
 
 def get_partition_fn(train_percent):
+
   def _partition_fn(row, num_partitions):
     if random.random() <= train_percent:
       return 0
     return 1
+
   return _partition_fn
 
 
@@ -130,14 +132,15 @@ def preprocess(p, args):
               query=_get_query('bigquery-public-data', 'samples', 'gsod'),
               use_standard_sql=True)))
 
-  train_eval_data = train_eval_data | 'ValidateData' >> beam.ParDo(DataValidator())
+  train_eval_data = train_eval_data | 'ValidateData' >> beam.ParDo(
+      DataValidator())
 
-  (transformed_train_eval_data, transformed_train_eval_metadata), transform_fn = (
-      (train_eval_data, train_eval_metadata)
-      | 'AnalyzeAndTransform' >> tft_beam.AnalyzeAndTransformDataset(
-          get_preprocessing_fn()))
+  (transformed_train_eval_data,
+   transformed_train_eval_metadata), transform_fn = (
+       (train_eval_data, train_eval_metadata)
+       | 'AnalyzeAndTransform' >> tft_beam.AnalyzeAndTransformDataset(
+           get_preprocessing_fn()))
 
-  
   _ = (
       transform_fn
       | 'WriteTransformFn' >> tft_beam_io.WriteTransformFn(args.output_dir))
@@ -145,9 +148,9 @@ def preprocess(p, args):
   transformed_train_eval_coder = coders.ExampleProtoCoder(
       transformed_train_eval_metadata.schema)
 
-  transformed_train_data, transformed_eval_data = transformed_train_eval_data | "Partition" >> beam.Partition(get_partition_fn(0.7), 2)
-
-  transformed_train_data | "WriteItOut" >> beam.io.WriteToText('out.txt')
+  transformed_train_data, transformed_eval_data = (
+      transformed_train_eval_data
+      | 'Partition' >> beam.Partition(get_partition_fn(0.7), 2))
 
   (transformed_train_data
    | 'SerializeTrainExamples' >> beam.Map(transformed_train_eval_coder.encode)
