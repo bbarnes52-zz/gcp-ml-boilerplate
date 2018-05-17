@@ -26,25 +26,38 @@ from constants import constants
 
 def _parse_arguments(argv):
   """Parses command line arguments."""
-  parser = argparse.ArgumentParser(
-      description="Runs training on THD data.")
+  parser = argparse.ArgumentParser(description="Runs training on THD data.")
   parser.add_argument(
-      "--model_dir", required=True,
+      "--model_dir",
+      required=True,
       help="The directory where model outputs will be written")
   parser.add_argument(
-      "--input_dir", required=True,
+      "--input_dir",
+      required=True,
       help=("GCS or local directory containing tensorflow-transform outputs."))
   parser.add_argument(
-      "--learning_rate", default=0.0005, required=False, type=float,
+      "--learning_rate",
+      default=0.0005,
+      required=False,
+      type=float,
       help=("Learning rate to use during training."))
   parser.add_argument(
-      "--batch_size", default=16, required=False, type=int,
+      "--batch_size",
+      default=16,
+      required=False,
+      type=int,
       help=("Batch size to use during training."))
   parser.add_argument(
-      "--num_epochs", default=20, required=False, type=int,
+      "--num_epochs",
+      default=20,
+      required=False,
+      type=int,
       help=("Number of epochs through the training set."))
   parser.add_argument(
-      "--train_steps", default=100000, required=False, type=int,
+      "--train_steps",
+      default=100000,
+      required=False,
+      type=int,
       help=("Number of training steps."))
   args, _ = parser.parse_known_args(args=argv[1:])
   return args
@@ -57,8 +70,8 @@ def _extract_label(d):
 
 def _get_feature_columns():
   return [
-    tf.feature_column.numeric_column(name)
-    for name in constants.FEATURE_COLUMNS
+      tf.feature_column.numeric_column(name)
+      for name in constants.FEATURE_COLUMNS
   ]
 
 
@@ -99,19 +112,24 @@ def get_serving_input_fn(input_dir):
 def run(args):
   #config = tf.estimator.RunConfig(save_checkpoints_steps=10)
   feature_spec = metadata_io.read_metadata(
-      posixpath.join(args.input_dir, constants.TRANSFORMED_METADATA_DIR)).schema.as_feature_spec()
+      posixpath.join(
+          args.input_dir,
+          constants.TRANSFORMED_METADATA_DIR)).schema.as_feature_spec()
   train_input_fn = get_input_fn(
-      "{}*".format(posixpath.join(args.input_dir, constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX)),
+      "{}*".format(
+          posixpath.join(args.input_dir,
+                         constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX)),
       feature_spec,
-      num_epochs = args.num_epochs,
-      batch_size = args.batch_size)
+      num_epochs=args.num_epochs,
+      batch_size=args.batch_size)
   train_spec = tf.estimator.TrainSpec(
       input_fn=train_input_fn, max_steps=args.train_steps)
   eval_input_fn = get_input_fn(
-      posixpath.join(args.input_dir, constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX),
+      posixpath.join(args.input_dir,
+                     constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX),
       feature_spec,
-      num_epochs = 1,
-      batch_size = args.batch_size)
+      num_epochs=1,
+      batch_size=args.batch_size)
   eval_spec = tf.estimator.EvalSpec(
       input_fn=eval_input_fn
       #exporters=tf.estimator.FinalExporter(
@@ -120,13 +138,12 @@ def run(args):
       #)
   )
   linear_regressor = tf.estimator.LinearRegressor(
-    feature_columns=_get_feature_columns(),
-    model_dir=args.model_dir)
+      feature_columns=_get_feature_columns(), model_dir=args.model_dir)
   tf.estimator.train_and_evaluate(linear_regressor, train_spec, eval_spec)
 
 
-if __name__ == '__main__':
-    args = _parse_arguments(sys.argv)
-    shutil.rmtree(args.model_dir, ignore_errors=True)
-    tf.logging.set_verbosity(tf.logging.INFO)
-    run(args)
+if __name__ == "__main__":
+  args = _parse_arguments(sys.argv)
+  shutil.rmtree(args.model_dir, ignore_errors=True)
+  tf.logging.set_verbosity(tf.logging.INFO)
+  run(args)
