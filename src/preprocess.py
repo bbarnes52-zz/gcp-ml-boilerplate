@@ -15,6 +15,7 @@
 import argparse
 from datetime import datetime
 import os
+import random
 import sys
 
 import apache_beam as beam
@@ -76,7 +77,7 @@ def _get_query(project, dataset, table):
     FROM
         `{project}.{dataset}.{table}`
     LIMIT
-        100000
+        100
     """.format(
         project=project, dataset=dataset, table=table)
 
@@ -85,12 +86,20 @@ class DataValidator(beam.DoFn):
 
   def process(self, element):
     if not isinstance(element['snow_depth'], float):
-      return
+      element['snow_depth'] = 0.0
     if element['snow_depth'] < 0:
       return
     if not isinstance(element['mean_visibility'], float):
       return
     yield element
+
+
+def get_partition_fn(train_percent):
+  def _partition_fn(row, num_partitions):
+    if random.random() <= train_percent:
+      return 0
+    return 1
+  return _partition_fn
 
 
 def get_preprocessing_fn():
@@ -115,31 +124,43 @@ def preprocess(p, args):
           os.path.join(args.output_dir, constants.RAW_METADATA_DIR), pipeline=p)
   )
 
-  train_data = (
+  train_eval_data = (
       p | 'ReadDataFromBQ' >> beam.io.Read(
           beam.io.BigQuerySource(
               query=_get_query('bigquery-public-data', 'samples', 'gsod'),
               use_standard_sql=True)))
 
-  train_data = train_data | 'ValidateData' >> beam.ParDo(DataValidator())
+  train_eval_data = train_eval_data | 'ValidateData' >> beam.ParDo(DataValidator())
 
-  (transformed_train_data, transformed_train_metadata), transform_fn = (
-      (train_data, train_eval_metadata)
+  (transformed_train_eval_data, transformed_train_eval_metadata), transform_fn = (
+      (train_eval_data, train_eval_metadata)
       | 'AnalyzeAndTransform' >> tft_beam.AnalyzeAndTransformDataset(
           get_preprocessing_fn()))
 
+  
   _ = (
       transform_fn
       | 'WriteTransformFn' >> tft_beam_io.WriteTransformFn(args.output_dir))
 
-  transformed_train_coder = coders.ExampleProtoCoder(
-      transformed_train_metadata.schema)
+  transformed_train_eval_coder = coders.ExampleProtoCoder(
+      transformed_train_eval_metadata.schema)
+
+  transformed_train_data, transformed_eval_data = transformed_train_eval_data | "Partition" >> beam.Partition(get_partition_fn(0.7), 2)
+
+  transformed_train_data | "WriteItOut" >> beam.io.WriteToText('out.txt')
 
   (transformed_train_data
-   | 'SerializeTrainExamples' >> beam.Map(transformed_train_coder.encode)
+   | 'SerializeTrainExamples' >> beam.Map(transformed_train_eval_coder.encode)
    | 'WriteTraining' >> beam.io.WriteToTFRecord(
        os.path.join(args.output_dir,
                     constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX),
+       file_name_suffix=constants.DATA_FILE_SUFFIX))
+
+  (transformed_eval_data
+   | 'SerializeEvalExamples' >> beam.Map(transformed_train_eval_coder.encode)
+   | 'WriteEval' >> beam.io.WriteToTFRecord(
+       os.path.join(args.output_dir,
+                    constants.TRANSFORMED_EVAL_DATA_FILE_PREFIX),
        file_name_suffix=constants.DATA_FILE_SUFFIX))
 
 
