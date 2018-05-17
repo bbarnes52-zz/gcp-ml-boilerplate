@@ -40,9 +40,10 @@ python ./trainer/task.py \
 - Run preprocessing on the cloud
 
 ```
-BUCKET=gs://gcp-ml-boilerplate-models
-TFT_OUTPUT_DIR=${BUCKET}/tft/outputs/${USER}$(date +%Y%m%d%H%M%S)
+BUCKET=gs://$(gcloud config get-value project)-ml
+TFT_OUTPUT_DIR=${BUCKET}/gcp_ml_boilerplate/pipeline_outputs/${USER}$(date +%Y%m%d%H%M%S)
 python preprocess.py \
   --output_dir $TFT_OUTPUT_DIR \
+  --project_id $(gcloud config get-value project) \
   --cloud
 ```

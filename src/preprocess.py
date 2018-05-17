@@ -77,6 +77,18 @@ def _get_query(project, dataset, table):
     """.format(project=project, dataset=dataset, table=table)
 
 
+class DataValidator(beam.DoFn):
+  
+  def process(self, element):
+    if not isinstance(element['snow_depth'], float):
+      return
+    if element['snow_depth'] < 0:
+      return
+    if not isinstance(element['mean_visibility'], float):
+      return
+    yield element
+
+
 def get_preprocessing_fn():
     def preprocessing_fn(inputs):
         # TODO: Implement me!
@@ -99,6 +111,7 @@ def preprocess(p, args):
   train_data = (p | "ReadDataFromBQ" >> beam.io.Read(beam.io.BigQuerySource(
       query=_get_query('bigquery-public-data', 'samples', 'gsod'), use_standard_sql=True)))
 
+  train_data = train_data | beam.ParDo(DataValidator())
                                                                                      
   (transformed_train_data, transformed_train_metadata), transform_fn = (           
           (train_data, train_eval_metadata)                                            
@@ -121,7 +134,7 @@ def preprocess(p, args):
 def main():
   args = _parse_arguments(sys.argv)
   options = {"project": args.project_id}
-  temp_dir = os.path.join(args.output_dir, tempfile.mkdtemp())
+  temp_dir = os.path.join(args.output_dir, 'tmp')
   if args.cloud:
     options.update({
         "job_name": ("gcp-ml-boilerplate-pipeline-{}".format(
@@ -129,7 +142,7 @@ def main():
         'max_num_workers': 100,
         'setup_file': os.path.abspath(os.path.join(os.path.dirname(__file__),
             'setup.py')),
-        "temp_location": temp_dir
+        "temp_location": os.path.join(args.output_dir, 'tmp')
     })
     runner = "DataflowRunner"
   else:

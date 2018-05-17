@@ -63,7 +63,6 @@ def _get_feature_columns():
 
 
 def get_input_fn(file_pattern, feature_spec, num_epochs, batch_size):
-  print file_pattern
 
   def _input_fn():
     files = tf.data.Dataset.list_files(file_pattern)
@@ -106,10 +105,6 @@ def run(args):
       feature_spec,
       num_epochs = args.num_epochs,
       batch_size = args.batch_size)
-  sess = tf.Session()
-  sess.run(tf.global_variables_initializer())
-  print sess.run(train_input_fn())
-  """
   train_spec = tf.estimator.TrainSpec(
       input_fn=train_input_fn, max_steps=args.train_steps)
   eval_input_fn = get_input_fn(
@@ -118,20 +113,20 @@ def run(args):
       num_epochs = 1,
       batch_size = args.batch_size)
   eval_spec = tf.estimator.EvalSpec(
-      input_fn=eval_input_fn,
-      exporters=tf.estimator.FinalExporter(
-        name='export',
-        serving_input_receiver_fn=get_serving_input_fn(args.input_dir)
-      )
+      input_fn=eval_input_fn
+      #exporters=tf.estimator.FinalExporter(
+      #  name='export',
+      #  serving_input_receiver_fn=get_serving_input_fn(args.input_dir)
+      #)
   )
   linear_regressor = tf.estimator.LinearRegressor(
     feature_columns=_get_feature_columns(),
     model_dir=args.model_dir)
   tf.estimator.train_and_evaluate(linear_regressor, train_spec, eval_spec)
-  """
 
 
 if __name__ == '__main__':
     args = _parse_arguments(sys.argv)
     shutil.rmtree(args.model_dir, ignore_errors=True)
+    tf.logging.set_verbosity(tf.logging.INFO)
     run(args)
