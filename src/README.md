@@ -47,3 +47,20 @@ python preprocess.py \
   --project_id $(gcloud config get-value project) \
   --cloud
 ```
+
+- Run training on the cloud
+
+```
+TRAINING_JOB_NAME=gcp_ml_boilerplate_${USER}$(date +%Y%m%d%H%M%S)
+TRAINING_JOB_DIR=${BUCKET}/gcp_ml_boilerplate/model_outputs/${TRAINING_JOB_NAME}
+gcloud ml-engine jobs submit training $TRAINING_JOB_NAME \
+    --module-name trainer.task \
+    --package-path trainer \
+    --region us-central1 \
+    --staging-bucket $BUCKET \
+    --config ./config.yaml \
+    --runtime-version 1.7 \
+    -- \
+    --input_dir $TFT_OUTPUT_DIR \
+    --model_dir $TRAINING_JOB_DIR
+```

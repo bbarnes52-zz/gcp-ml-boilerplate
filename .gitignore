@@ -1,1 +1,4 @@
 *.pyc
+*egg-info
+src/models/*
+src/tft_outputs/*
