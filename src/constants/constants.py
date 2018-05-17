@@ -1,5 +1,5 @@
 DATA_FILE_SUFFIX=".tfrecord.gz"
-FEATURE_COLUMNS=["visibility"]
+FEATURE_COLUMNS=["mean_visibility"]
 LABEL_COLUMN="snow_depth"
 RAW_METADATA_DIR="raw_metadata"
 TRANSFORM_FN_DIR="transform_fn"

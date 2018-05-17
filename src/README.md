@@ -24,8 +24,8 @@ export PATH=${PATH}:$(pwd)
 NOW=$(date +"%Y%m%d_%H%M%S")
 TFT_OUTPUT_DIR=tft_outputs/${NOW}
 python preprocess.py \
-  --output_dir=${TFT_OUTPUT_DIR} \
-  --$(gcloud config get-value project)
+  --output_dir ${TFT_OUTPUT_DIR} \
+  --project_id $(gcloud config get-value project)
 ```
 
 - Run training locally

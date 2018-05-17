@@ -73,7 +73,7 @@ def _get_query(project, dataset, table):
     FROM
         `{project}.{dataset}.{table}`
     LIMIT
-        1000
+        100000
     """.format(project=project, dataset=dataset, table=table)
 
 
