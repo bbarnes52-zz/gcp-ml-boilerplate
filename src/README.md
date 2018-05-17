@@ -5,15 +5,15 @@
 - Install necessary dependencies
 
 ```
-pip install tensorflow==1.8
-pip install apache-beam==2.4.0
-pip install tensorflow-transform==0.6.0
+pip install --user tensorflow==1.8
+pip install --user apache-beam==2.4.0
+pip install --user tensorflow-transform==0.6.0
 ```
 
 - Add constants to PATH
 
 ```
-export PATH=${PATH}:$(pwd)
+export PYTHONPATH=$(pwd)
 ```
 
 ## Commands
@@ -37,10 +37,26 @@ python ./trainer/task.py \
   --input_dir=$TFT_OUTPUT_DIR
 ```
 
+- Enable Cloud APIs
+
+```
+gcloud services enable \
+  dataflow.googleapis.com \
+  ml.googleapis.com
+```
+
+- Give CloudML Storage Admin Role
+
+```
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member serviceAccount:<YOUR_SERVICE_ACCOUNT> --role roles/storage.admin
+```
+
 - Run preprocessing on the cloud
 
 ```
 BUCKET=gs://$(gcloud config get-value project)-ml
+gsutil mb $BUCKET
 TFT_OUTPUT_DIR=${BUCKET}/gcp_ml_boilerplate/pipeline_outputs/${USER}$(date +%Y%m%d%H%M%S)
 python preprocess.py \
   --output_dir $TFT_OUTPUT_DIR \
