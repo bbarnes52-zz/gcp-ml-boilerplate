@@ -1,3 +1,3 @@
 set -e
 
-pylint --rcfile .pylintrc src/test.py
+pylint --rcfile .pylintrc src/setup.py

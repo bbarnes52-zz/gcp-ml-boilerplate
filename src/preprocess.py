@@ -111,7 +111,7 @@ def preprocess(p, args):
   train_data = (p | "ReadDataFromBQ" >> beam.io.Read(beam.io.BigQuerySource(
       query=_get_query('bigquery-public-data', 'samples', 'gsod'), use_standard_sql=True)))
 
-  train_data = train_data | beam.ParDo(DataValidator())
+  train_data = train_data | "ValidateData" >> beam.ParDo(DataValidator())
                                                                                      
   (transformed_train_data, transformed_train_metadata), transform_fn = (           
           (train_data, train_eval_metadata)                                            
